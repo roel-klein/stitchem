@@ -10,7 +10,6 @@ def estimate_vertical_shift_orb(
         bottom_incoming_image : npt.NDArray,
         top_stitched_image: npt.NDArray,
         starting_roi_xyxy: list[int], 
-        horizontal_decimation : int = 1,
         n_features: int = 30,
         k1d1_precomputed : tuple[cv2.KeyPoint, npt.NDArray] | None = None,
     ) -> tuple[float, tuple[npt.NDArray[np.float64], float]]:
@@ -18,10 +17,9 @@ def estimate_vertical_shift_orb(
     Estimates the vertical shift in pixels from still_image to shift_image using orb feature matching.
     Note that the maximum shift is implicitly the y-range of the starting region of interest. 
 
-
     Arguments:
-        - bottom_incoming_image : shifted image to align
-        - top_stitched_image : starting image to align with
+        - bottom_incoming_image : shifted image to align, BGR np.uint8
+        - top_stitched_image : starting image to align with, BGR np.uint8
         - starting_roi_xyxy: bounding box of the bottom_stitched_image to use for alignment
         - upsample_factor : fft upsampling for sub-pixel precision.
                 default=1 (no upsampling).
@@ -55,10 +53,10 @@ def estimate_vertical_shift_orb(
 
     orb = cv2.ORB_create(n_features) # type: ignore
     if k1d1_precomputed is None:
-        k1, d1 = orb.detectAndCompute(top_stitched_image[roi_y1:roi_y2, roi_x1:roi_x2:horizontal_decimation], None)
+        k1, d1 = orb.detectAndCompute(top_stitched_image[roi_y1:roi_y2, roi_x1:roi_x2], None)
     else:
         k1, d1 = k1d1_precomputed
-    k2, d2 = orb.detectAndCompute(bottom_incoming_image[roi_y1:roi_y2, roi_x1:roi_x2:horizontal_decimation], None)
+    k2, d2 = orb.detectAndCompute(bottom_incoming_image[roi_y1:roi_y2, roi_x1:roi_x2], None)
 
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
     matches = bf.match(d1, d2)
@@ -66,9 +64,8 @@ def estimate_vertical_shift_orb(
     # matches = sorted(matches, key=lambda m: m.distance)
 
     if not matches:
-        # TODO decide if we should return the first or
-        # second image keypoints ...
-        return 0.0, (k1, d1)
+        warnings.warn("No orb matches found, using default pixelshift of zero.", stacklevel=2)
+        return 0.0, (k2, d2)
 
     dy_values = []
     for m in matches:
@@ -79,4 +76,6 @@ def estimate_vertical_shift_orb(
 
     # Median is robust to mismatches
     pixelshift = np.median(dy_values)
+    if pixelshift <= 0:
+        warnings.warn(f"ORB found negative pixelshift {pixelshift}", stacklevel=2)
     return pixelshift, (k2, d2)

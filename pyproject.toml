@@ -1,6 +1,6 @@
 [project]
 name = "stitchem"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fast image stitching to convert areascan images to linescan images."
 readme = "README.md"
 authors = [

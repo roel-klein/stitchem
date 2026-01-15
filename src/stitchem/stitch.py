@@ -1,12 +1,13 @@
 from typing import Callable
+from queue import Queue
+from threading import Thread
+from pathlib import Path
+
 import numpy as np
 import numpy.typing as npt
+import cv2
 
-from stitchem.conversion import bgr2gray
-
-def preprocess(bgr_img, horizontal_decimation, starting_roi_xyxy):
-    updated_roi_xyxy = [0, starting_roi_xyxy[1], (starting_roi_xyxy[2] - starting_roi_xyxy[0]) // horizontal_decimation, starting_roi_xyxy[3]]
-    return bgr2gray(bgr_img[:, starting_roi_xyxy[0]:starting_roi_xyxy[2]:horizontal_decimation], dtype=np.uint8), updated_roi_xyxy
+from stitchem.conversion import preprocess
 
 class Stitcher:
     def __init__(
@@ -259,13 +260,9 @@ def process_images_with_queue(
     Returns:
         Tuple of (completed_count, outlier_list)
     """
-    from queue import Queue
-    from threading import Thread
-    from pathlib import Path
-    import cv2
+
     
     output_dir = Path(output_dir)
-    output_dir.mkdir(exist_ok=True)
     
     def image_loader(gen, output_queue):
         """Load images from generator and put them in a queue."""
@@ -281,6 +278,7 @@ def process_images_with_queue(
                 input_queue.task_done()
                 break
             path, img = item
+            path.parent.mkdir(exist_ok=True)
             cv2.imwrite(str(path), img)
             print(f"  Saved: {path}")
             input_queue.task_done()
@@ -311,7 +309,6 @@ def process_images_with_queue(
         print("  ENTER - Step forward one frame (when paused)")
         print("  's'   - Save current progress image")
         print("  'q'   - Quit")
-        print("  'f'   - Toggle fullscreen")
     
     # Process images
     completed_count = 0
@@ -539,7 +536,7 @@ def process_images_with_queue(
     # Save any remaining incomplete image
     incomplete_img = stitcher.flush()
     if incomplete_img is not None:
-        output_path = output_dir / f"stitched_{completed_count:04d}_incomplete.png"
+        output_path = output_dir / f"{window_name}_{completed_count:04d}_remainder.png"
         
         if visualize:
             cv2.imshow(window_name, incomplete_img)
@@ -578,13 +575,13 @@ if __name__ == "__main__":
     outdir = Path("./output")
     
     s = Stitcher(
-        partial(estimate_vertical_shift_match_template, starting_roi_xyxy=[0, 0, 0, 0], max_shift=100, horizontal_decimation=1),
+        partial(estimate_vertical_shift_match_template, max_shift=100),
         horizontal_decimation=4,
         starting_roi_xyxy=[500, 100, 3500, 320],
         target_height=3500,
         starting_y=100,
         max_shift=100,
-        blend_zone_height=20,  # Enable linear blending over 20 pixels
+        blend_zone_height=20,
     )
 
     # Warm up JIT compilation

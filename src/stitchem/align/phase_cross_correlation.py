@@ -8,21 +8,19 @@ import warnings
 import cv2
 
 
-def estimate_shift_phase_cross_correlation(
+def estimate_shift_phase_cross_correlation_skimage(
         bottom_incoming_image : npt.NDArray,
         top_stitched_image: npt.NDArray,
         starting_roi_xyxy: list[int], 
-        horizontal_decimation : int = 1,
         upsample_factor: int = 1,
     ) -> tuple[npt.NDArray[np.float64], float]:
     """
     Estimates the vertical shift in pixels from still_image to shift_image using phase cross correlation.
     Note that the maximum shift is implicitly the y-range of the starting region of interest. 
 
-
     Arguments:
-        - bottom_incoming_image : shifted image to align
-        - top_stitched_image : starting image to align with
+        - bottom_incoming_image : shifted image to align, grayscale np.float32
+        - top_stitched_image : starting image to align with, grayscale np.float32
         - starting_roi_xyxy: bounding box of the bottom_stitched_image to use for alignment
         - upsample_factor : fft upsampling for sub-pixel precision.
                 default=1 (no upsampling).
@@ -56,8 +54,8 @@ def estimate_shift_phase_cross_correlation(
     roi_y2 -= bottom_incoming_image.shape[0]
 
     pixelshift_yx, error, _ = phase_cross_correlation(
-            bgr2gray(top_stitched_image[roi_y1:roi_y2, roi_x1:roi_x2:horizontal_decimation]), 
-            bgr2gray(bottom_incoming_image[roi_y1:roi_y2, roi_x1:roi_x2:horizontal_decimation]), 
+            top_stitched_image[roi_y1:roi_y2, roi_x1:roi_x2], 
+            bottom_incoming_image[roi_y1:roi_y2, roi_x1:roi_x2], 
             normalization=None,
             upsample_factor=upsample_factor,
             disambiguate=False,
@@ -69,7 +67,6 @@ def estimate_shift_phase_cross_correlation_opencv(
         bottom_incoming_image : npt.NDArray,
         top_stitched_image: npt.NDArray,
         starting_roi_xyxy: list[int], 
-        horizontal_decimation : int = 1,
     ) -> tuple[npt.NDArray[np.float64], float]:
     """
     Estimates the vertical shift in pixels from still_image to shift_image using phase cross correlation.
@@ -77,8 +74,8 @@ def estimate_shift_phase_cross_correlation_opencv(
 
 
     Arguments:
-        - bottom_incoming_image : shifted image to align
-        - top_stitched_image : starting image to align with
+        - bottom_incoming_image : shifted image to align, grayscale np.float32
+        - top_stitched_image : starting image to align with, grayscale np.float32
         - starting_roi_xyxy: bounding box of the bottom_stitched_image to use for alignment
     Returns:
         pixelshift_yx : Estimated shift in pixels necessary to align shift_image with still_image, both in y and x direction 
@@ -109,8 +106,8 @@ def estimate_shift_phase_cross_correlation_opencv(
     roi_y2 -= bottom_incoming_image.shape[0]
 
     # Extract ROIs and convert to float32 for OpenCV
-    roi1 = bgr2gray(top_stitched_image[roi_y1:roi_y2, roi_x1:roi_x2:horizontal_decimation], dtype=np.float32)
-    roi2 = bgr2gray(bottom_incoming_image[roi_y1:roi_y2, roi_x1:roi_x2:horizontal_decimation], dtype=np.float32)
+    roi1 = top_stitched_image[roi_y1:roi_y2, roi_x1:roi_x2]
+    roi2 = bottom_incoming_image[roi_y1:roi_y2, roi_x1:roi_x2]
     
     # cv2.phaseCorrelate returns (shift_xy, response)
     # Note: OpenCV returns (x, y) while we need (y, x)

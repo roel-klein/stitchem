@@ -10,33 +10,25 @@ def estimate_vertical_shift_bruteforce(
         top_stitched_image: npt.NDArray, 
         starting_roi_xyxy: list[int], 
         max_shift : int,
-        horizontal_decimation : int = 1,
     ) -> tuple[int, npt.NDArray[np.float64]]:
     """
     Estimates the vertical shift in pixels from top_stitched_image to bottom_incoming_image.
     Arguments:
-        - bottom_incoming_image : shifted image to align
-        - top_stitched_image : starting image to align with
+        - bottom_incoming_image : shifted image to align, grayscale np.float32
+        - top_stitched_image : starting image to align with, grayscale np.float32
         - starting_roi_xyxy: bounding box of the bottom_stitched_image to use for alignment
         - max_shift : maximum vertical shift in pixels
-        - horizontal_decimation : subsampling factor in horizontal direction
     Returns:
         pixelshift : Estimated number pixels of that should be added from incoming image. 
         errors : For each pixelshift, the sum of the MAE.
     """
-    bottom_incoming_image = bottom_incoming_image[:,::horizontal_decimation,:]
-    top_stitched_image = top_stitched_image[:,::horizontal_decimation,:]
-    top_stitched_image = bgr2gray(top_stitched_image, dtype=np.float32)
-    bottom_incoming_image  = bgr2gray(bottom_incoming_image, dtype=np.float32)
-    # top_incoming_image = cv2.cvtColo=()
-
     height = bottom_incoming_image.shape[0]
     max_shift = min(max_shift, height)
 
 
-    roi_x1 = starting_roi_xyxy[0] // horizontal_decimation
+    roi_x1 = starting_roi_xyxy[0]
     roi_y1 = starting_roi_xyxy[1]
-    roi_x2 = starting_roi_xyxy[2] // horizontal_decimation
+    roi_x2 = starting_roi_xyxy[2]
     roi_y2 = starting_roi_xyxy[3]
 
     if roi_y1 < max_shift:
@@ -70,7 +62,6 @@ def estimate_vertical_shift_twostage(
         top_stitched_image: npt.NDArray, 
         starting_roi_xyxy: list[int], 
         max_shift : int,
-        horizontal_decimation : int = 1,
         first_stage_decimation : int = 2,
         second_stage_decimation : int = 1,
         second_stage_percentile : float = 10,
@@ -80,11 +71,10 @@ def estimate_vertical_shift_twostage(
     """
     Estimates the vertical shift in pixels from top_stitched_image to bottom_incoming_image.
     Arguments:
-        - bottom_incoming_image : shifted image to align
-        - top_stitched_image : starting image to align with
+        - bottom_incoming_image : shifted image to align, grayscale np.float32
+        - top_stitched_image : starting image to align with, grayscale np.float32
         - starting_roi_xyxy: bounding box of the bottom_stitched_image to use for alignment
         - max_shift : maximum vertical shift in pixels
-        - horizontal_decimation : subsampling factor in horizontal direction
         - first_stage_decimation : step size for shifts to consider in the first stage.
                 after which the top ranges are selected to be checked in the second stage
                 default=2.
@@ -97,35 +87,13 @@ def estimate_vertical_shift_twostage(
         pixelshift : Estimated number pixels of that should be added from incoming image. 
         errors : For each pixelshift, the sum of the MAE. For skipped pixelshift steps, np.nan. 
     """
-    bottom_incoming_image = bottom_incoming_image[:,::horizontal_decimation,:]
-    top_stitched_image = top_stitched_image[:,::horizontal_decimation,:]
-    
-    # for some reason the bgr2gray function is faster here
-    # than using cv2.cvtColor or simply taking one of the channels
-    # this seems strange ... 
-    # using the functions standalone, it is not...
-    top_stitched_image = bgr2gray(top_stitched_image, dtype=np.float32)
-    bottom_incoming_image  = bgr2gray(bottom_incoming_image, dtype=np.float32)
-    # bottom_stitched_image = cv2.cvtColor(bottom_stitched_image, cv2.COLOR_BGR2GRAY)
-    # top_incoming_image = cv2.cvtColor(top_incoming_image, cv2.COLOR_BGR2GRAY)
-    # pseudo-bgr2gray by taking g-channel
-    # bottom_stitched_image = bottom_stitched_image[:, :, 1] 
-    # top_incoming_image  = top_incoming_image[:, :, 1]
-    # bgr2gray function is a njit-ed 
-    # bottom_stitched_image = 0.299 * bottom_stitched_image[:,:, 2] + 0.587 * bottom_stitched_image[:,:, 1] + 0.114 * bottom_stitched_image[:,:, 0]
-    # top_incoming_image = 0.299 * top_incoming_image[:,:, 2] + 0.587 * top_incoming_image[:,:, 1] + 0.114 * top_incoming_image[:,:, 0]
-    
     height = bottom_incoming_image.shape[0]
     max_shift = min(max_shift, height)
 
-
-    roi_x1 = starting_roi_xyxy[0] // horizontal_decimation
+    roi_x1 = starting_roi_xyxy[0]
     roi_y1 = starting_roi_xyxy[1]
-    roi_x2 = starting_roi_xyxy[2] // horizontal_decimation
+    roi_x2 = starting_roi_xyxy[2]
     roi_y2 = starting_roi_xyxy[3]
-
-
-    
 
     if roi_y1 < max_shift:
         warnings.warn(
@@ -161,7 +129,6 @@ def estimate_vertical_shift_twostage(
 
         start =  int(max(first_stage_bestshift - first_stage_decimation + 1, 0))
         end =  int(min(first_stage_bestshift + first_stage_decimation, max_shift))
-        # end = min(roi_y2 - first_stage_bestshift + first_stage_decimation, roi_y2)
         shifts_secondstage = {
              i for i in range(start, end)
         }
@@ -198,4 +165,3 @@ def estimate_vertical_shift_twostage(
     
     pixel_offset = int(np.nanargmin(errors))
     return pixel_offset, errors_array
-    

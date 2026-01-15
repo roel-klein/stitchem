@@ -28,6 +28,13 @@ def bgr2gray(img, dtype=np.uint8):
     # Y=0.299*R + 0.587*G + 0.114*B
     return (0.299 * img[:,:, 2] + 0.587 * img[:,:, 1] + 0.114 * img[:,:, 0]).astype(dtype)
 
+def preprocess(bgr_img, horizontal_decimation, starting_roi_xyxy, to_grayscale=True, dtype=np.uint8):
+    updated_roi_xyxy = [0, starting_roi_xyxy[1], (starting_roi_xyxy[2] - starting_roi_xyxy[0]) // horizontal_decimation, starting_roi_xyxy[3]]
+    if to_grayscale:
+        return bgr2gray(bgr_img[:, starting_roi_xyxy[0]:starting_roi_xyxy[2]:horizontal_decimation], dtype=dtype), updated_roi_xyxy
+    else:
+        return (bgr_img[:, starting_roi_xyxy[0]:starting_roi_xyxy[2]:horizontal_decimation]).astype(dtype), updated_roi_xyxy
+
 if __name__ == "__main__":
     import cv2
     import time

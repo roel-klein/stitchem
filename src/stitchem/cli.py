@@ -45,7 +45,6 @@ def stitch(input_directory: str, output_directory: str, target_height: int, star
     """
     input_dir = Path(input_directory)
     output_dir = Path(output_directory)
-    output_dir.mkdir(exist_ok=True, parents=True)
     
     click.echo(f"Input directory: {input_dir}")
     click.echo(f"Output directory: {output_dir}")
@@ -58,9 +57,7 @@ def stitch(input_directory: str, output_directory: str, target_height: int, star
     starting_roi_xyxy = [roi_x1, roi_y1, roi_x2, roi_y2]
     stitcher = Stitcher(
         partial(estimate_vertical_shift_match_template, 
-                starting_roi_xyxy=[0, 0, 0, 0], 
                 max_shift=max_shift, 
-                horizontal_decimation=1,
                 method=cv2.TM_SQDIFF_NORMED),
         horizontal_decimation=horizontal_decimation,
         starting_roi_xyxy=starting_roi_xyxy,
