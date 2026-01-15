@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 from numba import njit # type: ignore 
 from functools import cache
 
@@ -28,7 +29,13 @@ def bgr2gray(img, dtype=np.uint8):
     # Y=0.299*R + 0.587*G + 0.114*B
     return (0.299 * img[:,:, 2] + 0.587 * img[:,:, 1] + 0.114 * img[:,:, 0]).astype(dtype)
 
-def preprocess(bgr_img, horizontal_decimation, starting_roi_xyxy, to_grayscale=True, dtype=np.uint8):
+def preprocess(
+        bgr_img : npt.NDArray, 
+        horizontal_decimation : int, 
+        starting_roi_xyxy : list[int], 
+        to_grayscale=True, 
+        dtype=np.uint8,
+        ) -> tuple[npt.NDArray, list[int]]:
     updated_roi_xyxy = [0, starting_roi_xyxy[1], (starting_roi_xyxy[2] - starting_roi_xyxy[0]) // horizontal_decimation, starting_roi_xyxy[3]]
     if to_grayscale:
         return bgr2gray(bgr_img[:, starting_roi_xyxy[0]:starting_roi_xyxy[2]:horizontal_decimation], dtype=dtype), updated_roi_xyxy

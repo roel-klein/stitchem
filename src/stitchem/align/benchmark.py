@@ -7,6 +7,7 @@ from time import perf_counter
 from collections import defaultdict
 
 import numpy as np
+import numpy.typing as npt
 import cv2
 from stitchem.io import img_generator
 from stitchem.align.bruteforce import estimate_vertical_shift_bruteforce, estimate_vertical_shift_twostage
@@ -27,7 +28,7 @@ def benchmark_alignment_functions(input_directory : Path,  every_n_frames : int 
     #       This is why it needs a larger roi for the boundary conditions.
     # TODO add ecc https://learnopencv.com/image-alignment-ecc-in-opencv-c-python/ 
     horizontal_decimation = 64
-    preprocessing_funcs : dict[str, Callable[..., object]] = {
+    preprocessing_funcs : dict[str, Callable[..., tuple[npt.NDArray, list[int]]]] = {
         "brute force" : partial(preprocess, starting_roi_xyxy=[500, 100, 3500, 320], dtype=np.float32, horizontal_decimation=horizontal_decimation),
         "two stage (10th percentile)" : partial(preprocess, starting_roi_xyxy=[500, 100, 3500, 320], dtype=np.float32, horizontal_decimation=horizontal_decimation),
         "two stage (peak neighbours)" : partial(preprocess, starting_roi_xyxy=[500, 100, 3500, 320], dtype=np.float32, horizontal_decimation=horizontal_decimation),
@@ -37,7 +38,7 @@ def benchmark_alignment_functions(input_directory : Path,  every_n_frames : int 
         "matchtemplate_twostage" : partial(preprocess, starting_roi_xyxy=[500, 100, 3500, 320], dtype=np.uint8, horizontal_decimation=horizontal_decimation),
     }   
 
-    align_funcs: dict[str, Callable[..., object]] = {
+    align_funcs: dict[str, Callable[..., tuple]] = {
         "brute force" : partial(estimate_vertical_shift_bruteforce, max_shift=100),
         "two stage (10th percentile)" : partial(estimate_vertical_shift_twostage, max_shift=100, first_stage_decimation=8, second_stage_percentile=10),
         "two stage (peak neighbours)" : partial(estimate_vertical_shift_twostage, max_shift=100, first_stage_decimation=8, second_stage_percentile=-1),

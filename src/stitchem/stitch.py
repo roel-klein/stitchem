@@ -31,8 +31,8 @@ class Stitcher:
         self.starting_roi_xyxy = starting_roi_xyxy
 
         # align state
-        self.previous_img = None
-        self.updated_roi_xyxy = None
+        self.previous_img : npt.NDArray | None = None
+        self.updated_roi_xyxy : list[int] | None = None
 
         # merging parameters
         self.max_shift = max_shift
@@ -368,7 +368,7 @@ def process_images_with_queue(
         completed_img = stitcher.merge(img, pixelshift)
         
         # Visualize the preprocessed images and alignment info
-        if visualize and prep_previous_vis is not None:
+        if visualize and prep_previous_vis is not None and stitcher.previous_img is not None:
             # Create visualization for preprocessed images
             prep_current_vis = stitcher.previous_img.copy()
             prep_current_vis = cv2.cvtColor(prep_current_vis, cv2.COLOR_GRAY2BGR)
@@ -585,7 +585,13 @@ if __name__ == "__main__":
     )
 
     # Warm up JIT compilation
-    bgr2gray(np.zeros((100, 100, 3), dtype=np.uint8), dtype=np.uint8)
+    preprocess(
+        np.zeros((100, 100, 3), dtype=np.uint8), 
+        horizontal_decimation=4, 
+        to_grayscale=True, 
+        dtype=np.uint8,
+        starting_roi_xyxy=[10, 20, 80, 90]
+        )
     
     profiler = cProfile.Profile()
     profiler.enable()

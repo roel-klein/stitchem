@@ -2,7 +2,6 @@ import numpy as np
 import numpy.typing as npt
 from skimage.registration import phase_cross_correlation
 
-from stitchem.conversion import bgr2gray
 import warnings
 
 import cv2

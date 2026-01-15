@@ -3,7 +3,6 @@ import  numpy.typing as npt
 import numpy as np
 import cv2
 
-from stitchem.conversion import bgr2gray
 
 def estimate_vertical_shift_bruteforce(
         bottom_incoming_image : npt.NDArray, 
